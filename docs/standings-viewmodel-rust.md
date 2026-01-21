@@ -37,10 +37,20 @@ pub enum LastTimeState {
 /// Різниця від лідера класу
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Gap {
-    /// секунди, якщо відомо (None = немає достатніх даних для розрахунку)
+    /// секунди, якщо відомо (Option::None = немає достатніх даних для розрахунку)
     pub value: Option<f32>,
     /// різниця в колах (0 = без різниці, >0 = позаду лідера)
     pub laps: i16,
+}
+
+/// Значення TrackSurface з iRSDK
+#[repr(i8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TrackSurface {
+    NotInWorld = -1,
+    OffTrack = 0,
+    OnTrack = 1,
+    PitLane = 2,
 }
 
 /// Дані про водія, які рідко змінюються
@@ -99,9 +109,9 @@ pub struct DriverRowVm {
     pub lap_time_deltas: Option<Vec<f32>>,
     pub last_pit_lap: Option<i32>,
     pub last_lap: Option<i32>,
-    /// TrackSurface: -1=не на треку, 0=поза трасою, 1=на трасі, 2=пітлейн
-    pub prev_car_track_surface: Option<i32>,
-    pub car_track_surface: Option<i32>,
+    /// Поточний і попередній TrackSurface (enum замість магічних чисел)
+    pub prev_car_track_surface: Option<TrackSurface>,
+    pub car_track_surface: Option<TrackSurface>,
     pub current_session_type: Option<std::sync::Arc<str>>,
     pub irating_change: Option<i32>,
     pub flags: DriverFlags,
@@ -178,7 +188,7 @@ pub enum DriverNameFormat {
 - Через високу частоту оновлення UI краще **залишити `i32`**, якщо downcast не дає істотної економії.
 
 ### 4.2. Типи, які можна оптимізувати без значної вартості
-- Прапори стану (`dnf`, `repair`, `penalty`, `slowdown`, `on_pit_road`, `on_track`, `radio_active`) — можна зберігати у `u16` (bit‑mask), або як `DriverFlags` з `u8/u16`.
+- Прапори стану (`dnf`, `repair`, `penalty`, `slowdown`, `on_pit_road`, `on_track`, `radio_active`) — залишити як `bool` у `DriverFlags` для простоти, або перейти на `bitflags` якщо потрібна щільна упаковка.
 - `LastTimeState` — `enum` (1 байт у Rust), без строкового формату.
 - Колір класу: `u32` packed RGB (як у TS).
 - Час/дельта: `f32` (iRSDK теж працює з float) → мінімум перетворень.
@@ -196,7 +206,7 @@ pub enum DriverNameFormat {
 
 1. **Не копіювати великі структури.** Брати тільки потрібні поля (`Driver`, `SessionResultsPosition`).
 2. **Кешувати статичні поля.** Наприклад `DriverStaticVm` будується лише коли змінюється склад драйверів.
-3. **Уникати `String` у hot‑path.** Для імен/ліцензій — `Arc<str>` або `SmolStr` (якщо дозволена залежність).
+3. **Уникати `String` у hot‑path.** Для імен/ліцензій — `Arc<str>` або `SmolStr` (якщо дозволена залежність, `SmolStr` вигідний для коротких рядків і зменшує алокації).
 4. **Дельти та часи** тримати як `f32`, форматувати лише перед рендером (або один раз при побудові ViewModel).
 
 ---
