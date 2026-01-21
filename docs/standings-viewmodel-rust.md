@@ -26,6 +26,8 @@
 
 ```rust
 /// Стан останнього кола
+/// - SessionFastest: час дорівнює найкращому часу сесії
+/// - PersonalBest: час дорівнює найкращому часу водія
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LastTimeState {
     SessionFastest,
@@ -35,8 +37,10 @@ pub enum LastTimeState {
 /// Різниця від лідера класу
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Gap {
-    pub value: Option<f32>, // секунди, якщо відомо
-    pub laps: i16,           // різниця в колах (0 = без різниці)
+    /// секунди, якщо відомо (None = немає достатніх даних для розрахунку)
+    pub value: Option<f32>,
+    /// різниця в колах (0 = без різниці, >0 = позаду лідера)
+    pub laps: i16,
 }
 
 /// Дані про водія, які рідко змінюються
@@ -82,8 +86,11 @@ pub struct DriverRowVm {
     pub car_idx: i32,
     pub class_position: Option<i32>,
     pub position: Option<i32>,
+    /// Різниця до лідера (секунди) в межах сесії
     pub delta: Option<f32>,
+    /// Різниця до лідера КЛАСУ (секунди/кола)
     pub gap: Option<Gap>,
+    /// Інтервал до попередньої машини (секунди)
     pub interval: Option<f32>,
     pub last_time: Option<f32>,
     pub last_time_state: Option<LastTimeState>,
@@ -92,6 +99,7 @@ pub struct DriverRowVm {
     pub lap_time_deltas: Option<Vec<f32>>,
     pub last_pit_lap: Option<i32>,
     pub last_lap: Option<i32>,
+    /// TrackSurface: -1=не на треку, 0=поза трасою, 1=на трасі, 2=пітлейн
     pub prev_car_track_surface: Option<i32>,
     pub car_track_surface: Option<i32>,
     pub current_session_type: Option<std::sync::Arc<str>>,
